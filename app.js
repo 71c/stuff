@@ -5,31 +5,30 @@ var xPlace = 1;
 var firstPlace = 0;
 var secondPlace = 0;
 var speed = 0.0003;
+var acceleration = 0.000005;
 var started = true;
 var r = 0;
 var xKeyFast = false;
 
 var halfWidth;
 var halfHeight;
-var mappedVolume = 0;
-
-var acceleration = 0.000005;
+var halfDiagDist;
 
 var currentVolume = 0;
 
 var song;
-
 var amp;
 
 
 function setup() {
-  createCanvas(window.innerWidth, window.innerHeight);
+  createCanvas(windowWidth, windowHeight);
   background(0);
   noStroke();
   smooth();
 
   halfWidth = width / 2;
   halfHeight = height / 2;
+  halfDiagDist = sqrt(sq(halfWidth) + sq(halfHeight));
 
   var input = document.querySelector("input");
   // https://stackoverflow.com/a/28619927/9911203
@@ -39,6 +38,8 @@ function setup() {
   };
 
   amp = new p5.Amplitude();
+
+  frameRate(200);
 }
 
 function loaded() {
@@ -53,11 +54,14 @@ function spiral(r) {
   var weight;
   background(0);
 
-  for (var i = 0; i < width; i++) {
+  for (var i = 0; i < /*halfDiagDist*/ width; i++) {
     r++;
     multiplyI = multiply * i;
     rCosMultiplyIPlusWidthOn2 = r * cos(multiplyI) + halfWidth;
     rSinMultiplyIPlusHeightOn2 = r * sin(multiplyI) + halfHeight;
+    if (rCosMultiplyIPlusWidthOn2 < 0 || rCosMultiplyIPlusWidthOn2 > width || rSinMultiplyIPlusHeightOn2 < 0 || rSinMultiplyIPlusHeightOn2 > height) {
+      continue;
+    }
 
     if (xPlace == 1) {
       firstPlace = 255 * rCosMultiplyIPlusWidthOn2 / width;
@@ -74,10 +78,14 @@ function spiral(r) {
       fill(firstPlace, extraColorValue, secondPlace);
     else if (extraColorPlace == 3)
       fill(firstPlace, secondPlace, extraColorValue);
-    weight = pow(i * i * (currentVolume + 0.125) * 16, 0.25); // THISTHIS <---- IS THE ONE USED CURRENTLY.
+    weight = pow(i * i * (currentVolume + 0.125) * 16, 0.25);
 
-
+    // if (rCosMultiplyIPlusWidthOn2 < 0)
+    //   console.log(i, rCosMultiplyIPlusWidthOn2)
+    // if (rSinMultiplyIPlusHeightOn2 < 0)
+    // console.log(i, rSinMultiplyIPlusHeightOn2)
     ellipse(rCosMultiplyIPlusWidthOn2, rSinMultiplyIPlusHeightOn2, weight, weight);
+
   }
 }
 
@@ -88,6 +96,7 @@ function draw() {
   }
   currentVolume = amp.getLevel();
   if (keyIsPressed) {
+    // console.log(keyCode, key);
     if (keyCode == LEFT_ARROW)
       multiply -= speed * 2;
     if (keyCode == RIGHT_ARROW)
@@ -100,10 +109,16 @@ function draw() {
       multiply -= 0.125;
     if (key == ']')
       multiply += 0.125;
-    if (key == ',' || key == '<')
+    if (key == ',' || key == '<') {
       extraColorValue -= 1;
-    if (key == '.' || key == '>')
+      if (extraColorValue < 0)
+        extraColorValue = 0;
+    }
+    if (key == '.' || key == '>') {
       extraColorValue += 1;
+      if (extraColorValue > 255)
+        extraColorValue = 255;
+    }
     if (key == '1')
       extraColorPlace = 1;
     if (key == '2')
@@ -119,7 +134,8 @@ function draw() {
     if (key == 'r')
       multiply = 0;
   }
-  println(frameRate());
+  console.log(frameRate());
+  width = window.innerWidth;
 }
 
 function keyPressed() {
@@ -138,4 +154,11 @@ function keyPressed() {
   if (key == 'c') {
     xKeyFast = !xKeyFast;
   }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  halfWidth = width / 2;
+  halfHeight = height / 2;
+  halfDiagDist = sqrt(sq(halfWidth) + sq(halfHeight));
 }
