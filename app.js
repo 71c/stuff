@@ -26,10 +26,7 @@ var keysPressed = {};
 var volumesList = [];
 var MAX_VOLUME_LENGTH = 250;
 
-
 var padding = 15;
-
-
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -56,6 +53,7 @@ function setup() {
   };
 
   amp = new p5.Amplitude();
+
 }
 
 function loaded() {
