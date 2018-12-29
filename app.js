@@ -17,7 +17,18 @@ var halfDiagDist;
 var currentVolume = 0;
 
 var song;
+var songA;
+var songB;
 var amp;
+
+var keysPressed = {};
+
+var volumesList = [];
+var MAX_VOLUME_LENGTH = 250;
+
+
+var padding = 15;
+
 
 
 function setup() {
@@ -34,17 +45,30 @@ function setup() {
   // https://stackoverflow.com/a/28619927/9911203
   input.onchange = function(e) {
     var songUrl = URL.createObjectURL(this.files[0]);
-    song = loadSound(songUrl, loaded);
+    if (!songB || songA && songA.isPlaying()) {
+      songB = loadSound(songUrl, loaded);
+      song = songB;
+    }
+    else if (songB.isPlaying()) {
+      songA = loadSound(songUrl, loaded);
+      song = songA;
+    }
   };
 
   amp = new p5.Amplitude();
-
-  frameRate(200);
 }
 
 function loaded() {
   started = true;
-  song.play();
+  if (!songB.isPlaying()) {
+    if (songA)
+      songA.stop();
+    songB.play();
+  }
+  else {
+    songB.stop();
+    songA.play();
+  }
 }
 
 function spiral(r) {
@@ -54,12 +78,12 @@ function spiral(r) {
   var weight;
   background(0);
 
-  for (var i = 0; i < /*halfDiagDist*/ width; i++) {
+  for (var i = 0; i < width; i++) {
     r++;
     multiplyI = multiply * i;
     rCosMultiplyIPlusWidthOn2 = r * cos(multiplyI) + halfWidth;
     rSinMultiplyIPlusHeightOn2 = r * sin(multiplyI) + halfHeight;
-    if (rCosMultiplyIPlusWidthOn2 < 0 || rCosMultiplyIPlusWidthOn2 > width || rSinMultiplyIPlusHeightOn2 < 0 || rSinMultiplyIPlusHeightOn2 > height) {
+    if (rCosMultiplyIPlusWidthOn2 < -padding || rCosMultiplyIPlusWidthOn2 > width + padding || rSinMultiplyIPlusHeightOn2 < -padding || rSinMultiplyIPlusHeightOn2 > height + padding) {
       continue;
     }
 
@@ -80,12 +104,7 @@ function spiral(r) {
       fill(firstPlace, secondPlace, extraColorValue);
     weight = pow(i * i * (currentVolume + 0.125) * 16, 0.25);
 
-    // if (rCosMultiplyIPlusWidthOn2 < 0)
-    //   console.log(i, rCosMultiplyIPlusWidthOn2)
-    // if (rSinMultiplyIPlusHeightOn2 < 0)
-    // console.log(i, rSinMultiplyIPlusHeightOn2)
     ellipse(rCosMultiplyIPlusWidthOn2, rSinMultiplyIPlusHeightOn2, weight, weight);
-
   }
 }
 
@@ -95,47 +114,51 @@ function draw() {
     multiply += speed;
   }
   currentVolume = amp.getLevel();
+  volumesList.push(currentVolume);
+  if (volumesList.length > MAX_VOLUME_LENGTH) {
+    volumesList.shift();
+  }
+  currentVolume = map(currentVolume, min(volumesList), max(volumesList), 0, 1);
+  if (isNaN(currentVolume))
+    currentVolume = 0;
   if (keyIsPressed) {
-    // console.log(keyCode, key);
-    if (keyCode == LEFT_ARROW)
+    if (keysPressed['ArrowLeft'])
       multiply -= speed * 2;
-    if (keyCode == RIGHT_ARROW)
+    if (keysPressed['ArrowRight'])
       multiply += speed;
-    if (keyCode == DOWN_ARROW)
+    if (keysPressed['ArrowDown'])
       speed -= acceleration;
-    if (keyCode == UP_ARROW)
+    if (keysPressed['ArrowUp'])
       speed += acceleration;
-    if (key == '[')
+    if (keysPressed['['])
       multiply -= 0.125;
-    if (key == ']')
+    if (keysPressed[']'])
       multiply += 0.125;
-    if (key == ',' || key == '<') {
+    if (keysPressed[',']) {
       extraColorValue -= 1;
       if (extraColorValue < 0)
         extraColorValue = 0;
     }
-    if (key == '.' || key == '>') {
+    if (keysPressed['.']) {
       extraColorValue += 1;
       if (extraColorValue > 255)
         extraColorValue = 255;
     }
-    if (key == '1')
+    if (keysPressed['1'])
       extraColorPlace = 1;
-    if (key == '2')
+    if (keysPressed['2'])
       extraColorPlace = 2;
-    if (key == '3')
+    if (keysPressed['3'])
       extraColorPlace = 3;
-    if (key == 'x' && xKeyFast)
+    if (keysPressed['x'] && xKeyFast)
       xPlace = xPlace == 1 ? 2 : 1;
-    if (key == '-')
+    if (keysPressed['-'])
       r--;
-    if (key == '=' || key == '+')
+    if (keysPressed['='])
       r++;
-    if (key == 'r')
+    if (keysPressed['r'])
       multiply = 0;
   }
-  console.log(frameRate());
-  width = window.innerWidth;
 }
 
 function keyPressed() {
@@ -144,16 +167,19 @@ function keyPressed() {
   }
   if (key == ' ') {
     started = !started;
-    if (song && song.isLoaded()) {
-      if (!started)
-        song.pause();
-      else
-        song.play();
-    }
+    if (!started)
+      song.pause();
+    else
+      song.play();
   }
   if (key == 'c') {
     xKeyFast = !xKeyFast;
   }
+  keysPressed[key] = true;
+}
+
+function keyReleased() {
+  keysPressed[key] = false;
 }
 
 function windowResized() {
